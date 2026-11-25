@@ -2,7 +2,6 @@ import random
 
 import pytest
 
-from src.data_loader import load_hw1
 from src.sampling import sample_test_cohort
 from src.schemas import Patient, Prediction, ReferenceLabel, Usage
 from src.synthetic import synthetic_dataset
@@ -26,15 +25,13 @@ def test_unknown_usage_is_not_zero():
     assert Usage(None, 2, 1, None) + Usage(3, 4, 1, 5) == Usage(None, 6, 2, None)
 
 
-def test_schema_validation_and_hw1_boundary():
+def test_schema_validation():
     with pytest.raises(ValueError):
         Patient("")
     with pytest.raises(ValueError):
         ReferenceLabel("synthetic-p", 2)
     with pytest.raises(ValueError):
         Patient("synthetic-p", diagnoses=["invented"])
-    with pytest.raises(NotImplementedError, match="HW1"):
-        load_hw1()
 
 
 def test_sampling_reproducible_excluded_and_independent_of_order_and_global_rng():

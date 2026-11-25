@@ -36,6 +36,14 @@ development and must be excluded from the test cohort at the patient level.
 - Do not invent MIMIC schemas, ICD definitions, patient observations, annotation
   decisions, or experimental findings. `src/data_loader.py` is the HW1 notebook
   integration boundary; leave unsupported mappings explicitly unimplemented.
+- The user confirmed the manual `is AD/ADRD?` export column contains human labels.
+  Keep `-1` and blank annotations unresolved and include their patients in the
+  development exclusion set. Combine all teammates' exports before test sampling;
+  reject overlapping identities instead of silently picking an annotation.
+- HW1 `all_icd_codes` omits ICD versions. Require source-resolved diagnoses keyed
+  by patient and admission before creating model inputs. Never guess versions or
+  turn missing diagnoses into negative baseline classifications. Reconcile HW1
+  prefix matching with the exact-match baseline before claiming reproduction.
 - Review the existing HW1 notebook within the approved data environment to establish
   identity mapping, source fields, encounter aggregation, observation windows,
   note selection, code definitions, labels, and the full development exclusion list.

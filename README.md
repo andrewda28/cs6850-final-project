@@ -36,7 +36,7 @@ are zero because no inference occurs. Latency is measured and will vary.
 | Module | Responsibility |
 | --- | --- |
 | `src/schemas.py` | Immutable patient, diagnosis, reference-label, prediction, and usage contracts |
-| `src/data_loader.py` | Explicit unimplemented HW1 adapter boundary |
+| `src/data_loader.py` | Confirmed HW1 export reader, human labels, team exclusions, and diagnosis-resolution boundary |
 | `src/synthetic.py` | Invented records and `SYNTH` codes, with no clinical meaning |
 | `src/sampling.py` | Uniform sampling without replacement after development exclusion |
 | `src/validation.py` | Duplicate, alignment, and development/test leakage checks |
@@ -124,10 +124,69 @@ configuration. Client failures and malformed scores fail the run with a generic
 error, without logging prompt or response bodies. Failed runs do not produce a
 partial comparative report; their incurred cost is not currently persisted.
 
-## HW1 integration required before research use
+## Loading HW1 development exports
 
-`load_hw1()` deliberately raises `NotImplementedError`. Review the existing HW1
-notebook in the approved environment and supply all of the following:
+`load_hw1(paths)` reads the inspected HW1 CSV export format. The user confirmed
+that the `is AD/ADRD? (type in 1,0, -1) ...` column contains human annotations.
+The exact header is `HUMAN_LABEL_COLUMN` in `src/data_loader.py`; the loader does
+not substitute `adrd_dx(final)` or `adrd_dx(icd_code)` for reviewed labels.
+
+```python
+from src.data_loader import load_hw1
+
+# Run only in the approved data environment. Paths are illustrative.
+development = load_hw1(["data/hw1/member_a.csv", "data/hw1/member_b.csv"])
+development_ids = development.development_ids
+references = development.references
+uncertain_ids = development.uncertain_ids
+unlabeled_ids = development.unlabeled_ids
+```
+
+Supply the files you actually have, then add all teammates' exports when available.
+The returned exclusion set covers **every patient in the supplied files**, including
+uncertain (`-1`) and blank annotations. It cannot establish that all team development
+patients have been supplied. Complete the team exclusion set before test sampling.
+Duplicate patient identities within or across files are errors, even across
+different admissions or matching labels; resolve overlap explicitly with the team.
+
+`references` contains only binary human labels (`0` and `1`). Uncertain and blank
+labels remain separately accessible, never converted to negative labels. Review
+time is unknown because this export does not record it. For development analysis,
+explicitly select the reviewed subset and report that selection; for final test
+evaluation, resolve labels under the agreed adjudication policy before running.
+
+The loader preserves `subject_id`, `hadm_id`, and the existing discharge `text`.
+It does not rerun the notebook, select a new encounter, append reviewer reasoning,
+or copy any input files. Only discharge text is currently passed as clinical text;
+radiology, medication, and other structured features require a separately agreed
+input design. Source clinical text still needs review under the observation policy.
+
+The notebook builds `all_icd_codes` as a pipe-separated list, dropping ICD version.
+Consequently, the export alone cannot construct versioned diagnosis inputs. Supply
+a source-verified mapping from `(subject_id, hadm_id)` to tuples of `DiagnosisCode`
+objects, using systems consistent with the reviewed baseline code set:
+
+```python
+# Resolve this mapping from the original diagnosis source in the approved environment.
+# Do not infer versions from code spelling or assign one version to the whole export.
+patients = development.to_patients(diagnoses_by_encounter)
+```
+
+Conversion requires a mapping for each exported encounter and checks that its
+codes match the exported code list exactly. Missing diagnoses cannot silently
+become negative cases. All patients, including unresolved cases, remain in the
+converted inputs, so full-cohort evaluation rejects missing reference labels.
+
+The HW1 notebook uses prefix matching for its ICD-selected strata, whereas the
+current baseline uses exact `(system, code)` membership. Reconcile this difference
+with the reviewed code dictionary before claiming to reproduce HW1. The HW1
+development sample is selected from ICD-positive/negative groups; it is not an
+independent population-random test sample.
+
+## Remaining integration before research use
+
+The CSV reader establishes the confirmed development-export mapping. Supply and
+review the remaining research inputs in the approved environment:
 
 1. Actual source tables/columns and stable patient-identity mapping; verify consent,
    access restrictions, and the allowable data environment through existing policy.
@@ -147,8 +206,9 @@ ignored storage. The library can select the cohort before labeling:
 ```python
 from src.sampling import sample_test_cohort
 
-# patients and development_ids come from the reviewed HW1 adapter.
-cohort = sample_test_cohort(patients, development_ids, size=100, seed=6850)
+# eligible_patients is a separately prepared, versioned sampling frame.
+# development_ids includes ALL teammate exports and any other tuning patients.
+cohort = sample_test_cohort(eligible_patients, development_ids, size=100, seed=6850)
 # Obtain independent reviewed labels for cohort in the approved environment.
 ```
 
