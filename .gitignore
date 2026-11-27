@@ -221,3 +221,48 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+data/
+outputs/
+.env
+
+# Restricted inputs and patient-level artifacts, regardless of directory.
+restricted/
+private/
+artifacts/
+results/
+logs/
+*.csv
+*.tsv
+*.jsonl
+*.ndjson
+*.json
+*.parquet
+*.arrow
+*.feather
+*.pkl
+*.pickle
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.xlsx
+*.xls
+*.db
+*.sqlite*
+*.sql
+*.zip
+*.gz
+*.pdf
+
+# Notebooks may contain sensitive cell outputs; port reviewed logic into .py.
+*.ipynb
+
+# Credentials and local configuration.
+.env.*
+credentials*
+secrets*
+*.pem
+*.key
+.aws/
+.DS_Store
